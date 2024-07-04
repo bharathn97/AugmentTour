@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>Augmentour Navigator</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.css"
+      type="text/css"
+    />
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      a,
+      u {
+        color: darkblue;
+        text-decoration: none;
+      }
+
+      #map {
+        width: 100%;
+        height: 80%;
+        position: relative;
+      }
+
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+      }
+
+      #arButtonA,
+      #arButtonB {
+        text-align: center;
+        padding: 15px 25px;
+        margin: 0 10px;
+        border: 2px solid #3498db; /* Border color */
+        border-radius: 8px; /* Border radius for rounded corners */
+        background-color: #56c8eb; /* Background color */
+        color: #3498db; /* Text color */
+        font-size: 16px;
+        text-decoration: none;
+        transition: background-color 0.3s ease, color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      #arButtonA:hover,
+      #arButtonB:hover {
+        background-color: #3498db; /* Background color on hover */
+        color: #fff; /* Text color on hover */
+        border-color: #3498db; /* Border color on hover */
+      }
+    </style>
+  </head>
+  <script>
+    setTimeout(function () {
+      document.getElementById("loading").style.display = "none";
+    }, 6000);
+    mapboxgl.accessToken =
+      "pk.eyJ1Ijoic3ViaGFtcHJlZXQiLCJhIjoiY2toY2IwejF1MDdodzJxbWRuZHAweDV6aiJ9.Ys8MP5kVTk5P9V2TDvnuDg";
+
+    let map;
+    let userMarker;
+    let directions; // Move it here to make it globally accessible
+
+    navigator.geolocation.getCurrentPosition(successLocation, errorLocation, {
+      enableHighAccuracy: true,
+    });
+
+    function successLocation(position) {
+      const userLocation = [
+        position.coords.longitude,
+        position.coords.latitude,
+      ];
+      setupMap(userLocation);
+
+      // Add a marker at the user's current location
+      userMarker = new mapboxgl.Marker().setLngLat(userLocation).addTo(map);
+
+      // Watch for changes in the user's position
+      navigator.geolocation.watchPosition(updateUserLocation, errorLocation, {
+        enableHighAccuracy: true,
+      });
+    }
+
+    function updateUserLocation(position) {
+      const updatedUserLocation = [
+        position.coords.longitude,
+        position.coords.latitude,
+      ];
+
+      // Update the map marker
+      userMarker.setLngLat(updatedUserLocation);
+
+      // Update the directions origin
+      directions.setOrigin(updatedUserLocation);
+
+      // Fetch fresh route details from Mapbox Directions API
+      directions.on("route", function (event) {
+        const updatedDetailedRouteDetails = event.route[0].legs[0].steps.map(
+          (step, index) => ({
+            instruction: step.maneuver.instruction,
+            distance: step.distance,
+            duration: step.duration,
+            location: {
+              longitude: step.maneuver.location[0],
+              latitude: step.maneuver.location[1],
+            },
+            maneuver: step.maneuver,
+            geometry: step.geometry,
+            intersections: step.intersections,
+            travel_mode: step.travel_mode,
+            maneuver_type: step.maneuver.type,
+            step_index: index,
+          })
+        );
+
+        const endL =
+          event.route[0].legs[0].steps[event.route[0].legs[0].steps.length - 1]
+            .maneuver.location;
+
+        // Update localStorage with the fresh route details
+        const data = {
+          startLocation: updatedUserLocation,
+          endLocation: endL, // Assuming endLocation is set elsewhere
+          detailedRouteDetails: updatedDetailedRouteDetails,
+        };
+
+        localStorage.setItem("routeData", JSON.stringify(data));
+
+        // Now you can use the updatedDetailedRouteDetails for any other purposes
+        // ...
+
+        console.log(
+          "Updated Detailed Route Details:",
+          updatedDetailedRouteDetails
+        );
+      });
+    }
+
+    function errorLocation() {
+      setupMap([-2.24, 53.48]);
+    }
+
+    function postRouteData(startLocation, endLocation, detailedRouteDetails) {
+      const data = {
+        startLocation: startLocation,
+        endLocation: endLocation,
+        detailedRouteDetails: detailedRouteDetails,
+      };
+
+      // Store the data in localStorage
+      localStorage.setItem("routeData", JSON.stringify(data));
+    }
+
+    function setupMap(center) {
+      map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: center,
+        zoom: 15,
+      });
+
+      map.on("load", function () {
+        const nav = new mapboxgl.NavigationControl();
+        map.addControl(nav);
+
+        navigator.geolocation.getCurrentPosition((position) => {
+          directions.setOrigin([
+            position.coords.longitude,
+            position.coords.latitude,
+          ]);
+        });
+
+        // Move directions initialization inside the map.on callback
+        directions = new MapboxDirections({
+          accessToken: mapboxgl.accessToken,
+        });
+
+        map.addControl(directions, "top-left");
+        const marker = new mapboxgl.Marker().setLngLat(center).addTo(map);
+
+        // Now attach the 'route' event listener
+        directions.on("route", function (event) {
+          // Extract start and end coordinates from the route
+          const startLocation =
+            event.route[0].legs[0].steps[0].maneuver.location;
+          const endLocation =
+            event.route[0].legs[0].steps[
+              event.route[0].legs[0].steps.length - 1
+            ].maneuver.location;
+
+          console.log("Start Location:", startLocation);
+          console.log("End Location:", endLocation);
+
+          const detailedRouteDetails = event.route[0].legs[0].steps.map(
+            (step, index) => ({
+              instruction: step.maneuver.instruction,
+              distance: step.distance,
+              duration: step.duration,
+              location: {
+                longitude: step.maneuver.location[0],
+                latitude: step.maneuver.location[1],
+              },
+              maneuver: step.maneuver,
+              geometry: step.geometry,
+              intersections: step.intersections,
+              travel_mode: step.travel_mode,
+              maneuver_type: step.maneuver.type,
+              step_index: index,
+            })
+          );
+
+          console.log("Detailed Route Details:", detailedRouteDetails);
+        });
+      });
+    }
+  </script>
+  <body>
+    <!-- Container for XR DOM Overlay elements -->
+    <div id="map"></div>
+    <div id="loading">Loading...</div>
+    <!-- Add this button to your HTML file -->
+    <div style="display: flex; justify-content: center">
+      <br />
+      Click to enter AR mode
+      <div id="arButtonA">
+        <a href="/app.html" id="startArButton" target="_blank">Start AR</a>
+      </div>
+      <br />
+      Click to see POIs
+      <div id="arButtonB">
+        <a href="/poi.html" id="startPOIButton" target="_blank">See POIS</a>
+      </div>
+    </div>
+     
+  </body>
+</html>

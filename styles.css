@@ -1,0 +1,22 @@
+#overlay
+{
+    max-height: 50%;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    background-color: rgba(200, 200, 200, 0.3);
+    justify-content: center;
+}
+
+#text
+{
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+#tour-guide-button
+{
+    position: absolute;
+    right: 0;
+}

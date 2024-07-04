@@ -1,0 +1,169 @@
+body {
+  font-family: "Arial", sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #111; /* Dark background color */
+}
+
+.bgImage {
+  background-color: #222; /* Slightly lighter background color */
+  margin-left: 20px; /* Adjust left margin */
+  margin-right: 20px; /* Adjust right margin */
+  overflow: hidden;
+  background-image: url("pexels-kindel-media-8566531.jpg");
+}
+
+.container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh; /* Adjusted height to ensure visibility */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000; /* Black background color */
+  opacity: 0.3; /* Adjust opacity as needed */
+}
+
+.content-container {
+  z-index: 2; /* Increase z-index to appear above background */
+  text-align: center;
+  color: #fff; /* White text color */
+  padding: 100px 50px 50px; /* Adjusted padding for top and bottom */
+}
+
+h1 {
+  color: #ff9800; /* Orange text color */
+  font-size: 3em;
+  font-weight: bold; /* Bold font weight */
+  margin-bottom: 20px; /* Add margin bottom for spacing */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add text shadow for depth */
+  animation: fadeIn 1s ease; /* Fade in animation */
+  margin-bottom: 50px;
+}
+
+p {
+  color: #bbb; /* Light gray text color */
+  font-size: 1.2em; /* Increased font size */
+  font-style: italic; /* Italic font style */
+  margin-bottom: 40px; /* Add margin bottom for spacing */
+}
+
+.feature {
+  display: flex;
+  margin-bottom: 50px; /* Add margin bottom for spacing */
+  animation: slideIn 1s ease; /* Slide in animation */
+}
+
+.image {
+  flex: 0 0 40%; /* 40% width for image */
+  animation: zoomIn 1s ease; /* Zoom in animation */
+}
+
+.img1 {
+  background-image: url("ar2.jpg");
+  background-size: cover;
+  background-position: center;
+  height: 300px; /* Adjusted height */
+  border-radius: 10px; /* Rounded corners for image */
+}
+
+.img2 {
+  background-image: url("ar1.jpg");
+  background-size: cover;
+  background-position: center;
+  height: 300px; /* Adjusted height */
+  border-radius: 10px; /* Rounded corners for image */
+}
+
+.img3 {
+  background-image: url("ar3.jpg");
+  background-size: cover;
+  background-position: center;
+  height: 300px; /* Adjusted height */
+  border-radius: 10px; /* Rounded corners for image */
+}
+
+.image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px; /* Rounded corners for image */
+}
+
+.explanation {
+  flex: 0 0 60%; /* 60% width for explanation */
+  padding-left: 20px; /* Add padding to create space between image and text */
+  animation: fadeIn 1s ease; /* Fade in animation */
+}
+
+.explanation h2 {
+  color: #eee; /* Light text color */
+  font-size: 1.8em; /* Larger font size */
+  margin-bottom: 20px; /* Add margin bottom for spacing */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Add text shadow for depth */
+}
+
+.explanation p {
+  color: #ddd; /* Lighter text color */
+  font-size: 1.1em; /* Increased font size */
+}
+
+.explanation-right
+{
+  flex: 0 0 60%; /* 60% width for explanation */
+  padding-right: 20px; /* Add padding to create space between image and text */
+  animation: fadeIn 1s ease; /* Fade in animation */
+}
+.btn {
+  display: inline-block;
+  background-color: #007bff; /* Blue button color */
+  color: #fff; /* White button text color */
+  text-decoration: none;
+  padding: 15px 30px; /* Increased padding */
+  border-radius: 30px; /* Rounded button shape */
+  font-size: 1.2em; /* Increased font size */
+  transition: background-color 0.3s;
+  animation: fadeIn 1s ease; /* Fade in animation */
+}
+
+.btn:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AR.js A-Frame Location-based</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script
+      type="text/javascript"
+      src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"
+    ></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.css"
+      type="text/css"
+    />
+  </head>
+
+  <body>
+    <a-scene
+      vr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
+      renderer="antialias: true; alpha: true"
+    >
+      <a-camera look-controls-enabled='true' arjs-device-orientation-controls='smoothingFactor: 0.1' gps-new-camera="gpsMinDistance: 2" rotation-reader></a-camera>
+
+      <script>
+        window.onload = function () {
+          mapboxgl.accessToken =
+      "pk.eyJ1Ijoic3ViaGFtcHJlZXQiLCJhIjoiY2toY2IwejF1MDdodzJxbWRuZHAweDV6aiJ9.Ys8MP5kVTk5P9V2TDvnuDg";
+          let prevInstruction;
+          let prevDistance;
+          let routeData1 = JSON.parse(localStorage.getItem("routeData"));
+          const startLocation = {
+  latitude: routeData1.startLocation[1],
+  longitude: routeData1.startLocation[0]
+};
+          let instructionArray = [];
+          let flag=0;
+          updateSpheresSize(startLocation,routeData1);
+          function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the Earth in kilometers
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * (Math.PI / 180)) *
+                Math.cos(lat2 * (Math.PI / 180)) *
+                Math.sin(dLon / 2) *
+                Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c * 1000 ; // Convert distance to meters
+            return distance;
+          }
+          function calculateRotation(start, end) {
+      const dLat = end.latitude - start.latitude;
+      const dLon = end.longitude - start.longitude;
+      // Calculate the rotation angle in radians
+      const rotationAngle = Math.atan2(dLon, dLat);
+      // Convert the rotation angle to degrees
+      const rotationDegrees = (rotationAngle * 180) / Math.PI;
+      // Adjust the rotation to ensure it's between 0 and 360 degrees
+      return (rotationDegrees + 360) % 360;
+    }
+
+          function calculateDirectionVector(start, end) {
+      const dLat = end.latitude - start.latitude;
+      const dLon = end.longitude - start.longitude;
+      const length = Math.sqrt(dLat * dLat + dLon * dLon);
+
+      // Normalize the direction vector
+      const direction = {
+        x: dLat / length,
+        y: dLon / length,
+      };
+
+      return direction;
+    }
+          function removeAllEntities() {
+  const scene = document.querySelector("a-scene");
+  const entities = scene.querySelectorAll("a-entity");
+  entities.forEach((entity) => {
+    scene.removeChild(entity);
+  });
+}
+          function shouldDisplayInstruction(currentInstruction, currentDistance) {
+    const prevInstructionObject = instructionArray.find(
+      (obj) => obj.instruction === currentInstruction
+    );
+
+    if (prevInstructionObject) {
+      const prevDistance = prevInstructionObject.distance;
+      // Compare the distance difference
+      if (Math.abs(currentDistance - prevDistance) > 20) {
+        // Update the array with the current distance
+        prevInstructionObject.distance = currentDistance;
+        return true;
+      }
+      else
+      {
+          return false;
+      }
+    } 
+    else
+    {
+      instructionArray.push({
+      instruction: currentInstruction,
+      distance: currentDistance,
+      });
+      return true;
+    }
+  }
+          function updateSpheresSize(position,routeData) {
+            removeAllEntities();
+          //     const iEntity = document.createElement("a-entity");
+
+          // iEntity.setAttribute("gps-new-entity-place", {
+          //   latitude: routeData.startLocation[1],
+          //   longitude: routeData.startLocation[0],
+          // });
+
+          //  iEntity.setAttribute(
+          //         "gltf-model",
+          //         "url(./assets/models/map_pointer_3d_icon.glb)"
+          // );
+
+          // document.querySelector("a-scene").appendChild(iEntity);
+
+            const eEntity = document.createElement("a-entity");
+          eEntity.setAttribute("gps-new-entity-place", {
+            latitude: routeData.endLocation[1],
+            longitude: routeData.endLocation[0],
+          });
+          eEntity.setAttribute(
+                  "gltf-model",
+                  "url(./assets/models/map_pointer_3d_icon.glb)"
+          );
+          document.querySelector("a-scene").appendChild(eEntity);
+            
+              const intersectionsArray = [];
+          routeData.detailedRouteDetails.forEach((step, index) => {
+            step.intersections.forEach((intersection, i) => {
+              intersectionsArray.push({
+                latitude: intersection.location[1],
+                longitude: intersection.location[0],
+                instruction: step.instruction,
+                speechdistance: step.distance,
+              });
+            });
+          });
+          intersectionsArray.forEach((intersection, i) => {
+              const distance = calculateDistance(
+                  position.latitude,
+                  position.longitude,
+                  intersection.latitude,
+                  intersection.longitude
+                );
+                const poiEntity = document.createElement("a-entity");
+                poiEntity.setAttribute("gps-new-entity-place", {
+                  latitude: intersection.latitude,
+                  longitude: intersection.longitude,
+                });
+               if (
+                  !((intersection.latitude === routeData.startLocation[1] && intersection.longitude === routeData.startLocation[0]) ||
+                  (intersection.latitude === routeData.endLocation[1] && intersection.longitude === routeData.endLocation[0]))
+              ) {
+                 poiEntity.setAttribute(
+                  "gltf-model",
+                  "url(./assets/models/arrowNew.glb)"
+                );
+              }
+                if(i < intersectionsArray.length - 2)
+                {
+                  const nextIntersection = intersectionsArray[i + 1];  
+                  const directionVector= calculateDirectionVector(
+                    { latitude: intersection.latitude, longitude: intersection.longitude },
+                    { latitude: nextIntersection.latitude, longitude: nextIntersection.longitude }
+                  );
+                  const rotationY = Math.atan2(directionVector.x, directionVector.y) * (180 / Math.PI);
+                   poiEntity.setAttribute("rotation", `0 ${rotationY} 0`);
+                }
+                else if (i === intersectionsArray.length - 2) {
+                  const directionVector = calculateDirectionVector(
+                    { latitude: intersection.latitude, longitude: intersection.longitude },
+                    { latitude: routeData.endLocation[1], longitude: routeData.endLocation[0] }
+                  );
+                  const rotationEnd = Math.atan2(directionVector.x, directionVector.y) * (180 / Math.PI);
+                  poiEntity.setAttribute("rotation", `0 ${rotationEnd} 0`);
+                }
+
+                //Marker Visibility
+                if (distance <= 20) {
+                  poiEntity.setAttribute("visible", "true");
+                  document.querySelector("a-scene").appendChild(poiEntity);
+                } else {
+                  poiEntity.setAttribute("visible", "false");
+                }
+ 
+                //Instruction            
+                if (distance <= 10) {
+      const currentInstruction = intersection.instruction;
+      const currentDistance = Math.floor(intersection.speechdistance);
+      if(currentDistance==0)
+      {
+        if(flag==0)
+        { 
+          speakInstruction(currentInstruction);
+          flag=1;
+        }
+      }
+      else if(shouldDisplayInstruction(currentInstruction, currentDistance)) {
+        if (currentInstruction.toLowerCase().startsWith('turn')) {
+          speakInstruction(`${currentInstruction} And Walk For another ${currentDistance} meters`);
+        } else {
+    //       const updatedInstruction = currentInstruction
+    // .replace(/\bnorthwest\b/g, 'straight')
+    // .replace(/\bnorth\s*west\b/g, 'straight')
+    // .replace( /\beast\b/gi, 'straight')
+    // .replace( /\bnorth\b/gi, 'straight')
+    // .replace( /\bsouth\b/gi, 'straight')
+    // .replace( /\bwest\b/gi, 'straight')      
+    // .replace(/\bsouthwest\b/g, 'straight')
+    // .replace(/\bsouth\s*west\b/g, 'straight')
+    // .replace(/\bsoutheast\b/g, 'straight')
+    // .replace(/\bsouth\s*east\b/g, 'straight')
+    // .replace(/\bnortheast\b/g, 'straight')
+    // .replace(/\bnorth\s*east\b/g, 'straight');
+          const finalInstruction = currentInstruction.replace(/\bDrive\b/g, 'Walk');
+          speakInstruction(`${finalInstruction} For another ${currentDistance} meters`);
+        }
+      }
+    }
+
+
+            if (i < intersectionsArray.length - 1) {
+                const nextIntersection = intersectionsArray[i + 1];
+
+                const diffLatitudes = Math.abs(
+                  intersection.latitude - nextIntersection.latitude
+                );
+                const diffLongitudes = Math.abs(
+                  intersection.longitude - nextIntersection.longitude
+                );
+
+                const segmentLength = 10; // Set the length of each segment
+
+                const numMidpoints = Math.floor(
+                  calculateDistance(
+                    intersection.latitude,
+                    intersection.longitude,
+                    nextIntersection.latitude,
+                    nextIntersection.longitude
+                  ) / segmentLength
+                );
+
+                for (let j = 1; j <= numMidpoints; j++) {
+                  const ratio = j / (numMidpoints + 1);
+
+                  const midpointLat =
+                    intersection.latitude +
+                    ratio * diffLatitudes;
+                  const midpointLon =
+                    intersection.longitude +
+                    ratio * diffLongitudes;
+
+                  const midpointEntity = document.createElement("a-entity");
+                  midpointEntity.setAttribute("gps-new-entity-place", {
+                    latitude: midpointLat,
+                    longitude: midpointLon,
+                  });
+                  midpointEntity.setAttribute(
+                    "gltf-model",
+                    "url(./assets/models/arrowNew.glb)"
+                  );
+
+                  const directionVectorMidpoint = calculateDirectionVector(
+                    {
+                      latitude: midpointLat,
+                      longitude: midpointLon,
+                    },
+                    {
+                      latitude: nextIntersection.latitude,
+                      longitude: nextIntersection.longitude,
+                    }
+                  );
+
+                  const rotationMidpoint =
+                    Math.atan2(directionVectorMidpoint.x, directionVectorMidpoint.y) *
+                    (180 / Math.PI);
+                  midpointEntity.setAttribute("rotation", `0 ${rotationMidpoint} 0`);
+
+                  const midpointDistance = calculateDistance(
+                    position.latitude,
+                    position.longitude,
+                    midpointLat,
+                    midpointLon
+                  );
+
+                  if (midpointDistance <= 20) {
+                    midpointEntity.setAttribute("visible", "true");
+                    document.querySelector("a-scene").appendChild(midpointEntity);
+                  } else {
+                    midpointEntity.setAttribute("visible", "false");
+                  }
+                }
+              }
+            });
+             
+          }
+          document
+            .querySelector("[gps-new-camera='gpsMinDistance: 2']")
+            .addEventListener("gps-camera-update-position", (e) => {
+              // When the camera's position updates, update the size of the spheres
+                      let directions; 
+                         const updatedUserLocation = [
+                      e.detail.position.longitude,
+                      e.detail.position.latitude,
+                    ];
+                    const endLocation = [
+                      routeData1.endLocation[0],
+                      routeData1.endLocation[1],
+                    ];
+                    directions = new MapboxDirections({
+                      accessToken: mapboxgl.accessToken,
+                    });
+                    directions.setOrigin(updatedUserLocation);
+                    directions.setDestination(endLocation);
+                     // Fetch fresh route details from Mapbox Directions API
+                      directions.on('route', function (event) {
+                          const updatedDetailedRouteDetails = event.route[0].legs[0].steps.map(
+                      (step, index) => ({
+                        instruction: step.maneuver.instruction,
+                        distance: step.distance,
+                        duration: step.duration,
+                        location: {
+                          longitude: step.maneuver.location[0],
+                          latitude: step.maneuver.location[1],
+                        },
+                        maneuver: step.maneuver,
+                        geometry: step.geometry,
+                        intersections: step.intersections,
+                        travel_mode: step.travel_mode,
+                        maneuver_type: step.maneuver.type,
+                        step_index: index,
+                      })
+                    );
+                    const endL = event.route[0].legs[0].steps[
+              event.route[0].legs[0].steps.length - 1
+            ].maneuver.location;
+                    // Update localStorage with the fresh route details
+                    const data = {
+                      startLocation: updatedUserLocation,
+                      endLocation: endL , // Assuming endLocation is set elsewhere
+                      detailedRouteDetails: updatedDetailedRouteDetails,
+                    };
+                    updateSpheresSize(e.detail.position,data);
+            });
+            });
+
+          const iEntity = document.createElement("a-entity");
+
+          iEntity.setAttribute("gps-new-entity-place", {
+            latitude: routeData1.startLocation[1],
+            longitude: routeData1.startLocation[0],
+          });
+
+           iEntity.setAttribute(
+                  "gltf-model",
+                  "url(./assets/models/map_pointer_3d_icon.glb)"
+          );
+
+          document.querySelector("a-scene").appendChild(iEntity);
+ const eEntity = document.createElement("a-entity");
+
+          eEntity.setAttribute("gps-new-entity-place", {
+            latitude: routeData1.endLocation[1],
+            longitude: routeData1.endLocation[0],
+          });
+          eEntity.setAttribute(
+                  "gltf-model",
+                  "url(./assets/models/map_pointer_3d_icon.glb)"
+          );
+          document.querySelector("a-scene").appendChild(eEntity);
+         
+          function speakInstruction(instruction) {
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = instruction;
+            window.speechSynthesis.speak(msg);
+          }
+        };
+      </script>
+    </a-scene>
+  </body>
+</html>
